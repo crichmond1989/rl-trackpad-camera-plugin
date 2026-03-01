@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Attach the VS Code debugger to a running RuneLite process started via:
+            //   ./gradlew runClient
+            // The Gradle task starts RuneLite with JDWP on port 5005 (suspend=n),
+            // so RuneLite launches immediately and this config connects to it.
+            "type": "java",
+            "name": "Attach to RuneLite (port 5005)",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 5005
+        }
+    ]
+}

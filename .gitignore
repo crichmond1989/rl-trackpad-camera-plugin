@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Gradle build output
+build/
+
+# Gradle daemon and local cache
+.gradle/
+
+# Gradle wrapper JAR is intentionally committed so anyone can run ./gradlew
+# without installing Gradle. Un-comment the line below only if you prefer
+# to require a local Gradle installation instead:
+# gradle/wrapper/gradle-wrapper.jar
+
+# Compiled Java classes (safety net; build/ already covers these)
+*.class
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+out/
+
+# VS Code — user-specific files only; launch.json and tasks.json are committed
+.vscode/settings.json
+.vscode/*.log
+
+# Claude Code — local project state written by Claude Code CLI
+# CLAUDE.md is intentionally tracked; .claude/ is local machine state
+.claude/
+
+# OS
+Thumbs.db
+ehthumbs.db
