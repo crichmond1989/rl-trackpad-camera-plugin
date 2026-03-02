@@ -34,11 +34,24 @@ tasks.withType(JavaCompile).configureEach {
     options.release.set(11)
 }
 
+// Allow reflection into MouseWheelEvent's private fields (used by invertZoom).
+// On Java 11 this is a no-op warning; on Java 17+ it is required for setAccessible.
+def reflectionOpenArg = '--add-opens=java.desktop/java.awt.event=ALL-UNNAMED'
+
+test {
+    jvmArgs reflectionOpenArg
+    // Use the same Java 11 toolchain as the run task for consistent behaviour
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
 tasks.register('run', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = pluginMainClass
 
     jvmArgs '-ea'
+    jvmArgs reflectionOpenArg
     // Expose JDWP for VS Code debugger attach (port 5005)
     jvmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
 

@@ -8,9 +8,11 @@ import org.mockito.ArgumentCaptor;
 
 import java.awt.Component;
 import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.lang.reflect.Field;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -63,12 +65,6 @@ public class TrackpadCameraPluginTest {
         return event;
     }
 
-    private static MouseWheelEvent trackpadSwipeWithSource(double delta, int modifiers, boolean ctrl) {
-        MouseWheelEvent event = trackpadSwipe(delta, modifiers, ctrl);
-        when(event.getSource()).thenReturn(mock(Component.class));
-        return event;
-    }
-
     private static MouseWheelEvent scrollWheelClick() {
         MouseWheelEvent event = mock(MouseWheelEvent.class);
         when(event.getPreciseWheelRotation()).thenReturn(3.0);
@@ -77,10 +73,12 @@ public class TrackpadCameraPluginTest {
         return event;
     }
 
-    // --- Trackpad detection ---
+    // --- Scroll wheel pass-through ---
 
     @Test
     public void scrollWheelEventPassesThrough() {
+        // A physical scroll wheel event (no SHIFT/CTRL, invertZoom off) must not be consumed
+        // and must not trigger any camera action — OSRS handles zoom natively
         MouseWheelEvent event = scrollWheelClick();
         plugin.mouseWheelMoved(event);
         verify(event, never()).consume();
@@ -140,12 +138,16 @@ public class TrackpadCameraPluginTest {
     // --- Zoom inversion ---
 
     @Test
-    public void invertZoomConsumesVerticalScroll() {
+    public void invertZoomMutatesScrollInPlace() {
+        // Uses a real MouseWheelEvent so we can verify the field was mutated in-place
         when(config.invertZoom()).thenReturn(true);
-        // Source component required for dispatchEvent
-        MouseWheelEvent event = trackpadSwipeWithSource(0.5, 0, false);
+        MouseWheelEvent event = new MouseWheelEvent(
+            mock(Component.class), MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(),
+            0, 0, 0, 0, 0, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, 0, 0.5
+        );
         plugin.mouseWheelMoved(event);
-        verify(event).consume();
+        assertEquals("Zoom inversion must negate precise rotation",
+            -0.5, event.getPreciseWheelRotation(), 0.001);
     }
 
     @Test
@@ -241,4 +243,5 @@ public class TrackpadCameraPluginTest {
         int invertedPitch = captor.getValue();
         assertTrue("Inverted tilt should decrease pitch for positive delta", invertedPitch < 350);
     }
+
 }

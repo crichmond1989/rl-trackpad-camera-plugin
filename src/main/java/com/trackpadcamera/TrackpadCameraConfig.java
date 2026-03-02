@@ -11,7 +11,7 @@ public interface TrackpadCameraConfig extends Config {
 
     @ConfigSection(
         name = "Zoom",
-        description = "Zoom is handled by OSRS natively",
+        description = "Enable \"Use Scroll Wheel to Zoom\" in OSRS Settings > Controls > Camera",
         position = 0,
         closedByDefault = false
     )
@@ -33,22 +33,11 @@ public interface TrackpadCameraConfig extends Config {
     )
     String TILT_SECTION = "tiltSection";
 
-    // ---- Zoom (informational) ----
-
-    @ConfigItem(
-        keyName = "zoomNote",
-        name = "Enable \"Use Scroll Wheel to Zoom\" in OSRS Settings > Controls > Camera",
-        description = "Vertical scroll is passed through to OSRS. This plugin does not control zoom.",
-        section = TrackpadCameraConfig.ZOOM_SECTION,
-        position = 0
-    )
-    default boolean zoomNote() {
-        return false;
-    }
+    // ---- Zoom ----
 
     @ConfigItem(
         keyName = "invertZoom",
-        name = "Invert Zoom",
+        name = "Invert",
         description = "Reverses the scroll direction for zooming — scroll up zooms out instead of in",
         section = TrackpadCameraConfig.ZOOM_SECTION,
         position = 1

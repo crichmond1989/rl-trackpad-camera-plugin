@@ -11,9 +11,9 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 import javax.inject.Inject;
-import java.awt.Component;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.lang.reflect.Field;
 
 @PluginDescriptor(
     name = "Trackpad Camera",
@@ -31,15 +31,30 @@ public class TrackpadCameraPlugin extends Plugin implements MouseWheelListener, 
     @Inject
     private TrackpadCameraConfig config;
 
-    // Trackpad detection: trackpads send precise scroll amounts (non-integer or very small)
-    // A standard scroll wheel sends integer values like 3.0
-    private static final double TRACKPAD_PRECISION_THRESHOLD = 1.5;
-
     // Sensitivity multiplier applied on top of config sensitivity
     private static final double ROTATE_SENSITIVITY = 3.0;
 
-    // Prevents recursion when we dispatch the synthesized inverted scroll event
-    private boolean dispatchingInvertedScroll = false;
+    // Reflection fields used by invertZoom to negate scroll values in-place.
+    // Mutating the live event avoids re-dispatching, which caused bounce on fast scrolls.
+    // Null on environments where reflection access to java.awt.event is restricted (Java 17+
+    // without --add-opens); invertZoom silently passes through in that case.
+    private static final Field PRECISE_WHEEL_ROTATION_FIELD;
+    private static final Field WHEEL_ROTATION_FIELD;
+
+    static {
+        Field pwr = null;
+        Field wr = null;
+        try {
+            pwr = MouseWheelEvent.class.getDeclaredField("preciseWheelRotation");
+            pwr.setAccessible(true);
+            wr = MouseWheelEvent.class.getDeclaredField("wheelRotation");
+            wr.setAccessible(true);
+        } catch (NoSuchFieldException | RuntimeException ignored) {
+            // Reflection access restricted — invertZoom passes through with original direction
+        }
+        PRECISE_WHEEL_ROTATION_FIELD = pwr;
+        WHEEL_ROTATION_FIELD = wr;
+    }
 
     @Override
     protected void startUp() {
@@ -58,35 +73,13 @@ public class TrackpadCameraPlugin extends Plugin implements MouseWheelListener, 
         return configManager.getConfig(TrackpadCameraConfig.class);
     }
 
-    /**
-     * Detects whether a scroll event came from a trackpad.
-     * Trackpads produce precise (fractional or very small) scroll amounts,
-     * whereas scroll wheels produce larger, integer-based values.
-     */
-    private boolean isTrackpadEvent(MouseWheelEvent e) {
-        double precise = e.getPreciseWheelRotation();
-        double coarse = e.getWheelRotation();
-        return Math.abs(precise - coarse) > 0.01 || Math.abs(precise) < TRACKPAD_PRECISION_THRESHOLD;
-    }
-
     @Override
     public MouseWheelEvent mouseWheelMoved(MouseWheelEvent e) {
-        // Pass the synthesized inverted event through without reprocessing it
-        if (dispatchingInvertedScroll) {
-            return e;
-        }
-
         if (client.getGameState() != GameState.LOGGED_IN) {
             return e;
         }
 
-        if (!isTrackpadEvent(e)) {
-            // Let standard scroll wheel events pass through normally
-            return e;
-        }
-
         double preciseRotation = e.getPreciseWheelRotation();
-
         boolean isHorizontal = (e.getModifiersEx() & java.awt.event.InputEvent.SHIFT_DOWN_MASK) != 0;
 
         if (isHorizontal) {
@@ -105,35 +98,20 @@ public class TrackpadCameraPlugin extends Plugin implements MouseWheelListener, 
                 rotateCameraPitch(delta);
                 e.consume();
             }
-        } else if (config.invertZoom()) {
-            // Plain vertical scroll with invert enabled:
-            // Consume the original event and dispatch one with the rotation negated.
-            // OSRS receives the synthesized event and zooms in the opposite direction natively.
-            MouseWheelEvent inverted = new MouseWheelEvent(
-                (Component) e.getSource(),
-                e.getID(),
-                e.getWhen(),
-                e.getModifiersEx(),
-                e.getX(),
-                e.getY(),
-                e.getXOnScreen(),
-                e.getYOnScreen(),
-                e.getClickCount(),
-                e.isPopupTrigger(),
-                e.getScrollType(),
-                e.getScrollAmount(),
-                -e.getWheelRotation(),
-                -e.getPreciseWheelRotation()
-            );
-            e.consume();
-            dispatchingInvertedScroll = true;
-            try {
-                ((Component) e.getSource()).dispatchEvent(inverted);
-            } finally {
-                dispatchingInvertedScroll = false;
+        } else {
+            // Plain vertical scroll
+            if (config.invertZoom() && PRECISE_WHEEL_ROTATION_FIELD != null) {
+                // Invert scroll direction in-place so OSRS sees the negated values.
+                // Mutating the live event avoids re-dispatch timing issues that cause bounce.
+                try {
+                    PRECISE_WHEEL_ROTATION_FIELD.setDouble(e, -preciseRotation);
+                    WHEEL_ROTATION_FIELD.setInt(e, -e.getWheelRotation());
+                } catch (IllegalAccessException ignored) {
+                    // Pass through with original direction
+                }
             }
+            // Pass through for OSRS native zoom (inverted or not)
         }
-        // Plain vertical scroll (invertZoom disabled): pass through for OSRS native zoom
 
         return e;
     }
