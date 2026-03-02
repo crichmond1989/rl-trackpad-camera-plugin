@@ -29,21 +29,16 @@ dependencies {
 group = 'com.trackpadcamera'
 version = '1.0.0'
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-    options.release.set(11)
-}
-
-// Allow reflection into MouseWheelEvent's private fields (used by invertZoom).
-// On Java 11 this is a no-op warning; on Java 17+ it is required for setAccessible.
-def reflectionOpenArg = '--add-opens=java.desktop/java.awt.event=ALL-UNNAMED'
-
-test {
-    jvmArgs reflectionOpenArg
-    // Use the same Java 11 toolchain as the run task for consistent behaviour
-    javaLauncher = javaToolchains.launcherFor {
+// Use Java 11 for compilation and tests. The run task sets its own launcher explicitly
+// because JavaExec does not auto-inherit the toolchain.
+java {
+    toolchain {
         languageVersion = JavaLanguageVersion.of(11)
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
 }
 
 tasks.register('run', JavaExec) {
@@ -51,14 +46,12 @@ tasks.register('run', JavaExec) {
     mainClass = pluginMainClass
 
     jvmArgs '-ea'
-    jvmArgs reflectionOpenArg
     // Expose JDWP for VS Code debugger attach (port 5005)
     jvmArgs '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005'
 
     args '--developer-mode'
 
-    // RuneLite's JAR verification is incompatible with Java 17+.
-    // Use Java 11 at runtime; Gradle will auto-download it if not installed.
+    // JavaExec does not auto-inherit the java toolchain — set explicitly.
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(11)
     }

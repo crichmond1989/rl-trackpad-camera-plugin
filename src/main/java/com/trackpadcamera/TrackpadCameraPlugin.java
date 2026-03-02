@@ -36,8 +36,6 @@ public class TrackpadCameraPlugin extends Plugin implements MouseWheelListener, 
 
     // Reflection fields used by invertZoom to negate scroll values in-place.
     // Mutating the live event avoids re-dispatching, which caused bounce on fast scrolls.
-    // Null on environments where reflection access to java.awt.event is restricted (Java 17+
-    // without --add-opens); invertZoom silently passes through in that case.
     private static final Field PRECISE_WHEEL_ROTATION_FIELD;
     private static final Field WHEEL_ROTATION_FIELD;
 
