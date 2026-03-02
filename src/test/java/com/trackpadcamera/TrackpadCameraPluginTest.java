@@ -12,7 +12,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.lang.reflect.Field;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -138,16 +137,15 @@ public class TrackpadCameraPluginTest {
     // --- Zoom inversion ---
 
     @Test
-    public void invertZoomMutatesScrollInPlace() {
-        // Uses a real MouseWheelEvent so we can verify the field was mutated in-place
+    public void invertZoomConsumesOriginalEvent() {
+        // invertZoom=true — original event must be consumed so OSRS sees only the re-dispatched inverted one
         when(config.invertZoom()).thenReturn(true);
         MouseWheelEvent event = new MouseWheelEvent(
             mock(Component.class), MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(),
             0, 0, 0, 0, 0, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, 0, 0.5
         );
         plugin.mouseWheelMoved(event);
-        assertEquals("Zoom inversion must negate precise rotation",
-            -0.5, event.getPreciseWheelRotation(), 0.001);
+        assertTrue("Zoom inversion must consume the original event", event.isConsumed());
     }
 
     @Test
