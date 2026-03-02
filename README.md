@@ -1,6 +1,6 @@
 # Trackpad Camera Plugin for RuneLite
 
-Control the Old School RuneScape camera using Mac trackpad gestures.
+Control the Old School RuneScape camera using trackpad gestures. Developed for MacBook trackpads, but compatible with any input device that encodes gestures the same way.
 
 ## Gestures
 
@@ -10,23 +10,28 @@ Control the Old School RuneScape camera using Mac trackpad gestures.
 | Ctrl + two-finger scroll up/down | Tilt camera (pitch) |
 | Two-finger swipe up/down | Zoom camera (OSRS native) |
 
-## Installation
-
-1. Clone this repo
-2. Open in IntelliJ IDEA (recommended) with the RuneLite plugin development setup
-3. Run `./gradlew build`
-4. Load as a local plugin in the RuneLite client
-
-## Development Setup
-
-Follow the [RuneLite plugin development guide](https://github.com/runelite/plugin-hub#development) to configure your IDE and local RuneLite client for plugin testing.
-
 ## Configuration
 
-All gestures and their sensitivities can be toggled and tuned in the RuneLite plugin config panel.
+Each gesture can be individually enabled, inverted, and tuned:
+
+| Section | Options |
+|---|---|
+| Zoom | Invert scroll direction |
+| Rotation | Enable/disable, invert, sensitivity (1–20) |
+| Tilt | Enable/disable, invert, sensitivity (1–20) |
+
+The plugin intercepts scroll events by modifier key — it does not detect the input device. Mouse users who scroll while holding SHIFT or CTRL will also trigger rotation and tilt. Zoom inversion applies to all plain vertical scroll input.
 
 ## Requirements
 
-- macOS (trackpad gesture support)
-- Java 11+
+- Java 11
 - RuneLite client
+- A trackpad that encodes horizontal swipes as `SHIFT+scroll` and ctrl+scroll as `CTRL+scroll` (standard on macOS)
+
+## Development
+
+```bash
+./gradlew build    # compile and lint
+./gradlew test     # run unit tests
+./gradlew run      # launch RuneLite with the plugin loaded
+```
